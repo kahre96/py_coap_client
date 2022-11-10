@@ -11,7 +11,7 @@ if __name__ == '__main__':
     while True:
         method_code = input("Enter method:\n 1.Get\n2.POST\n3.PUT\n4.DELETE")
         uri = input("Enter uri-path: ")
-        if method_code != '1':
+        if method_code == '2' or method_code == '3':
             payload = input("Enter payload: ")
         coap_client(method_code, uri, MesID, payload)
         MesID += 1

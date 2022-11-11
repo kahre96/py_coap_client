@@ -13,7 +13,8 @@ if __name__ == '__main__':
         uri = input("Enter uri-path: ")
         if method_code == '2' or method_code == '3':
             payload = input("Enter payload: ")
-        coap_client(method_code, uri, MesID, payload)
+        content = input("enter contenttype: ")
+        coap_client(method_code, uri, MesID, payload, int(content))
         MesID += 1
 
 

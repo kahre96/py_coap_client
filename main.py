@@ -6,7 +6,7 @@ uri = ""
 
 
 if __name__ == '__main__':
-    MesID = random.randint(1, 50000)
+    MesID = random.randint(4096, 65535)
     payload = ""
     while True:
         method_code = input("Enter method:\n 1.Get\n2.POST\n3.PUT\n4.DELETE")

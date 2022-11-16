@@ -1,6 +1,5 @@
 import socket
 from bitstring import ConstBitStream, BitArray, ReadError
-import codecs
 
 def coap_client(methodcode, uri, messageID, payload="", contenttype=""):
 
@@ -14,6 +13,8 @@ def coap_client(methodcode, uri, messageID, payload="", contenttype=""):
         urilen = len(uri)
         optionhex = uri.encode('utf-8').hex()
         uri_path = f"b{urilen}{optionhex}"
+
+    #add the contenttype
     if contenttype != "":
         content = ""
         if contenttype == 0:
@@ -26,30 +27,36 @@ def coap_client(methodcode, uri, messageID, payload="", contenttype=""):
 
     MesID= hex(messageID)
 
+    # check if chosen method is post/put and if os adds the payload
     if methodcode == '2' or methodcode == '3':
         pay_load = payload.encode('utf-8').hex()
         body = f"FF {pay_load}"
 
+    # the request message is in the form of a hexstring
     msgFromClient = f"50 0{methodcode} {MesID[2:]} {uri_path} {contentopt} {body}"
 
+    #covert the hexvalues to bytes cause the sendto function needs the data in byte format
     bytesToSend = bytes.fromhex(msgFromClient)
+
 
     serverAddressPort = ("coap.me", 5683)
 
+    #buffer
     packet = bytearray(4096)
 
+    #socket
     UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
     UDPClientSocket.sendto(bytesToSend, serverAddressPort)
 
     msgFromServer = UDPClientSocket.recvfrom_into(packet)
 
-    byte = bytes([0xff])
+    # remove empty part of buffer
     byte2 = bytes(3)
+    header, body = packet.split(byte2, 1)
 
-    header, body = packet.split(byte, 1)
-    body, useless = body.split(byte2, 1)
 
+    # covert recived content into a bitstream and grabs the bits for different part of the coap message
     bits = BitArray(header)
 
     s = ConstBitStream(bits)
@@ -60,9 +67,13 @@ def coap_client(methodcode, uri, messageID, payload="", contenttype=""):
     print("Response Code: ", s.read('int:3'), ".", s.read('int:5'))
     print("Message ID: ", s.read('uint:16'))
 
+
+    # parse options
+    #looks for ff after each option to end options
     optionnr = 1
     optioncounter = 0
-    while True:
+    while s.peek('hex:8') != 'ff':
+
         try:
             optiondelta = s.read('uint:4')
             optionlength = s.read('uint:4')
@@ -114,7 +125,17 @@ def coap_client(methodcode, uri, messageID, payload="", contenttype=""):
             # print("cant read optionvalue, ignore if option was empty")
             break
 
-    message_content = body.decode("utf-8")
+    # step past delimitor/end of options
+    delim = s.read('hex:8')
+
+    # insert the rest into the payload
+    message_content = ""
+    while True:
+        try:
+            temp = s.read('hex:8')
+            message_content += bytes.fromhex(temp).decode('utf-8')
+        except ReadError:
+            break
 
     print("Payload:", message_content)
 
